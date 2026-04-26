@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Spam Detector</title>
+    <style>
+        body { font-family: Arial; background: #f4f4f4; padding: 40px; text-align:center; }
+        .box { background:white; padding:20px; width:650px; margin:auto; border-radius:10px; box-shadow:0 0 10px gray; }
+        textarea { width:100%; height:200px; }
+        button { margin-top:15px; padding:10px; }
+        .spam { color:red; font-weight:bold; }
+        .not { color:green; font-weight:bold; }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+    <h2>Spam Message Detector 🧠</h2>
+
+    <p>Separate messages using blank line</p>
+
+    <textarea id="msg"></textarea><br>
+
+    <button onclick="check()">Check Messages</button>
+
+    <div id="out"></div>
+</div>
+
+<script>
+async function check() {
+    let text = document.getElementById("msg").value;
+
+    let messages = text.split(/\n\s*\n/).map(t => t.trim()).filter(t => t !== "");
+
+    try {
+        let res = await fetch("http://127.0.0.1:8000/predict_batch", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({texts: messages})
+        });
+
+        let data = await res.json();
+
+        let output = "";
+
+        data.results.forEach(r => {
+            let cls = r.prediction.includes("Spam") ? "spam" : "not";
+
+            output += `
+                <p><b>Message:</b><br>${r.message.replace(/\n/g,"<br>")}</p>
+                <p><b>Result:</b> <span class="${cls}">${r.prediction}</span></p>
+                <p><b>Confidence:</b> ${r.confidence}</p>
+                <p><b>Patterns:</b> ${r.patterns_detected.join(", ")}</p>
+                <hr>
+            `;
+        });
+
+        document.getElementById("out").innerHTML = output;
+
+    } catch {
+        document.getElementById("out").innerHTML = "❌ Error connecting to server";
+    }
+}
+</script>
+
+</body>
+</html>
